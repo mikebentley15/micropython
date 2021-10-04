@@ -26,3 +26,11 @@
 
 #define MICROPY_PY_BUILTINS_HELP                (1)
 #define MICROPY_PY_BUILTINS_HELP_MODULES        (1)
+#define MICROPY_READER_VFS                      (1)
+#define MICROPY_VFS                             (1)
+#define MICROPY_VFS_POSIX                       (1)
+#define MICROPY_PY_UOS_VFS                      (1)
+
+#define mp_import_stat mp_vfs_import_stat
+#define mp_builtin_open mp_vfs_open
+#define mp_builtin_open_obj mp_vfs_open_obj
