@@ -18,6 +18,7 @@ MicroPython device over a serial connection.  Commands supported are:
 """
 
 import os, sys
+import textwrap
 import serial.tools.list_ports
 
 from . import pyboardextended as pyboard
@@ -372,6 +373,85 @@ def main():
     args = sys.argv[1:]
     pyb = None
     did_action = False
+
+    if '-h' in args or '--help' in args:
+        print(textwrap.dedent(f'''\
+            Usage: {_PROG} [command] ...
+
+            Description:
+                This tool provides an integrated set of utilities to remotely
+                interact with and automate a MicroPython device over a serial
+                connection.
+
+                The simplest way to use this tool is:
+
+                    {_PROG}
+
+                This will automatically connect to the device and provide an
+                interactive REPL.
+
+                Multiple commands may be specified and they will be run
+                sequentially.  Connection and disconnection will be done at the
+                start and end of the execution of the tool, if such commands
+                are not explicitly given.  Automatic connection will search for
+                the first available serial device.  If no action is specified,
+                then the REPL will be entered.
+
+            Commands:
+                connect <device>        -- connect to given device
+                                           device may be: list, auto, id:x, port:x
+                                           or any valid device name/path
+                disconnect              -- disconnect current device
+                mount <local-dir>       -- mount local directory on device
+                eval <string>           -- evaluate and print the string
+                exec <string>           -- execute the string
+                run <file>              -- run the given local script
+                fs <command> <args...>  -- execute filesystem commands on the device
+                                           command may be: cat, ls, cp, rm, mkdir, rmdir
+                                           use ":" as a prefix to specify a file on the device
+                repl                    -- enter REPL
+                                           options:
+                                               --capture <file>
+                                               --inject-code <string>
+                                               --inject-file <file>
+
+            Shortcuts:
+                Shortcuts can be defined using the macro system.  Built-in shortcuts are:
+
+                - a0, a1, a2, a3: connect to /dev/ttyACM?
+                - u0, u1, u2, u3: connect to /dev/ttyUSB?
+                - c0, c1, c2, c3: connect to COM?
+                - cat, ls, cp, rm, mkdir, rmdir, fd: filesystem commands
+                - reset: reset the device
+                - bootloader: make the device enter its bootloader
+
+            Configuration:
+                Any user configuration, including user-defined shortcuts, can
+                be placed in ~/.config/{_PROG}/config.py.  For example:
+
+                    # custom macro commands
+                    commands = {{
+                        "c33": "connect id:334D335C3138",
+                        "bl": "bootloader",
+                        "double x=4": "eval x*2",
+                    }}
+
+            Examples:
+                mpremote
+                mpremote a1
+                mpremote connect /dev/ttyUSB0 repl
+                mpremote ls
+                mpremote a1 ls
+                mpremote exec "import micropython; micropython.mem_info()"
+                mpremote eval 1/2 eval 3/4
+                mpremote mount .
+                mpremote mount . exec "import local_script"
+                mpremote ls
+                mpremote cat boot.py
+                mpremote cp :main.py .
+                mpremote cp main.py :
+                mpremote cp -r dir/ :
+            '''))
 
     try:
         while args:
