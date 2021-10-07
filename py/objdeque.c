@@ -47,6 +47,7 @@ typedef struct _mp_obj_deque_t {
     #define FLAG_CHECK_OVERFLOW 1
 } mp_obj_deque_t;
 
+STATIC mp_obj_t mp_obj_deque_append(mp_obj_t self_in, mp_obj_t arg);
 STATIC mp_obj_t deque_getiter(mp_obj_t self_in, mp_obj_iter_buf_t *iter_buf);
 
 STATIC void deque_print(const mp_print_t *print, mp_obj_t o_in, mp_print_kind_t kind) {
@@ -62,14 +63,16 @@ STATIC void deque_print(const mp_print_t *print, mp_obj_t o_in, mp_print_kind_t 
     mp_printf(print, "], maxlen=%ld)", o->alloc-1);
 }
 
+STATIC void deque_extend_from_iter(mp_obj_t self, mp_obj_t iterable) {
+    mp_obj_t iter = mp_getiter(iterable, NULL);
+    mp_obj_t item;
+    while ((item = mp_iternext(iter)) != MP_OBJ_STOP_ITERATION) {
+        mp_obj_deque_append(self, item);
+    }
+}
+
 STATIC mp_obj_t deque_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *args) {
     mp_arg_check_num(n_args, n_kw, 2, 3, false);
-
-    /* Initialization from existing sequence is not supported, so an empty
-       tuple must be passed as such. */
-    if (args[0] != mp_const_empty_tuple) {
-        mp_raise_ValueError(NULL);
-    }
 
     // Protect against -1 leading to zero-length allocation and bad array access
     mp_int_t maxlen = mp_obj_get_int(args[1]);
@@ -82,12 +85,15 @@ STATIC mp_obj_t deque_make_new(const mp_obj_type_t *type, size_t n_args, size_t 
     o->alloc = maxlen + 1;
     o->i_get = o->i_put = 0;
     o->items = m_new0(mp_obj_t, o->alloc);
+    o->flags = 0;
 
     if (n_args > 2) {
         o->flags = mp_obj_get_int(args[2]);
     }
 
-    return MP_OBJ_FROM_PTR(o);
+    mp_obj_t self = MP_OBJ_FROM_PTR(o);
+    deque_extend_from_iter(self, args[0]);
+    return self;
 }
 
 STATIC inline size_t deque_len(mp_obj_deque_t *self) {
@@ -119,7 +125,7 @@ STATIC mp_obj_t deque_unary_op(mp_unary_op_t op, mp_obj_t self_in) {
     }
 }
 
-STATIC mp_obj_t mp_obj_deque_append(mp_obj_t self_in, mp_obj_t arg) {
+mp_obj_t mp_obj_deque_append(mp_obj_t self_in, mp_obj_t arg) {
     mp_obj_deque_t *self = MP_OBJ_TO_PTR(self_in);
 
     size_t new_i_put = DEQUE_IDX(self, self->i_put + 1);
@@ -138,6 +144,13 @@ STATIC mp_obj_t mp_obj_deque_append(mp_obj_t self_in, mp_obj_t arg) {
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(deque_append_obj, mp_obj_deque_append);
+
+STATIC mp_obj_t mp_obj_deque_extend(mp_obj_t self_in, mp_obj_t arg) {
+    mp_check_self(mp_obj_is_type(self_in, &mp_type_deque));
+    deque_extend_from_iter(self_in, arg);
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(deque_extend_obj, mp_obj_deque_extend);
 
 STATIC mp_obj_t deque_popleft(mp_obj_t self_in) {
     mp_obj_deque_t *self = MP_OBJ_TO_PTR(self_in);
@@ -182,6 +195,7 @@ STATIC mp_obj_t deque_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value) {
 
 STATIC const mp_rom_map_elem_t deque_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_append), MP_ROM_PTR(&deque_append_obj) },
+    { MP_ROM_QSTR(MP_QSTR_extend), MP_ROM_PTR(&deque_extend_obj) },
     #if 0
     { MP_ROM_QSTR(MP_QSTR_clear), MP_ROM_PTR(&deque_clear_obj) },
     #endif
