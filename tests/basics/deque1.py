@@ -98,3 +98,7 @@ try:
     print(d[-4])
 except IndexError:
     print("IndexError")
+
+# iterating
+for val in d:
+    print(val)

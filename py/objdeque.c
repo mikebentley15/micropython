@@ -34,6 +34,9 @@
 
 #define DEQUE_IDX(deq, i) ((i) % (deq)->alloc)
 
+/******************************************************************************/
+/* deque                                                                      */
+
 typedef struct _mp_obj_deque_t {
     mp_obj_base_t base;
     size_t alloc;
@@ -43,6 +46,8 @@ typedef struct _mp_obj_deque_t {
     uint32_t flags;
     #define FLAG_CHECK_OVERFLOW 1
 } mp_obj_deque_t;
+
+mp_obj_t deque_getiter(mp_obj_t self_in, mp_obj_iter_buf_t *iter_buf);
 
 STATIC mp_obj_t deque_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *args) {
     mp_arg_check_num(n_args, n_kw, 2, 3, false);
@@ -178,7 +183,41 @@ const mp_obj_type_t mp_type_deque = {
     .make_new = deque_make_new,
     .unary_op = deque_unary_op,
     .subscr = deque_subscr,
+    .getiter = deque_getiter,
     .locals_dict = (mp_obj_dict_t *)&deque_locals_dict,
 };
+
+/******************************************************************************/
+/* deque iterator                                                             */
+
+typedef struct _mp_obj_deque_it_t {
+    mp_obj_base_t base;
+    mp_fun_1_t iternext;
+    mp_obj_t deq;
+    size_t i;
+} mp_obj_deque_it_t;
+
+STATIC mp_obj_t deque_it_iternext(mp_obj_t self_in) {
+    mp_obj_deque_it_t *self = MP_OBJ_TO_PTR(self_in);
+    mp_obj_deque_t *deq = MP_OBJ_TO_PTR(self->deq);
+    if (self->i != deq->i_put) {
+        mp_obj_t o_out = deq->items[self->i];
+        self->i = DEQUE_IDX(deq, self->i + 1);
+        return o_out;
+    } else {
+        return MP_OBJ_STOP_ITERATION;
+    }
+}
+
+mp_obj_t deque_getiter(mp_obj_t self_in, mp_obj_iter_buf_t *iter_buf) {
+    assert(sizeof(mp_obj_deque_it_t) <= sizeof(mp_obj_iter_buf_t));
+    mp_obj_deque_t *self = MP_OBJ_TO_PTR(self_in);
+    mp_obj_deque_it_t *o = (mp_obj_deque_it_t *)iter_buf;
+    o->base.type = &mp_type_polymorph_iter;
+    o->iternext = deque_it_iternext;
+    o->deq = self_in;
+    o->i = self->i_get;
+    return MP_OBJ_FROM_PTR(o);
+}
 
 #endif // MICROPY_PY_COLLECTIONS_DEQUE

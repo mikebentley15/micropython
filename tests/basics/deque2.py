@@ -113,10 +113,3 @@ try:
     print(d[::3])
 except TypeError as e:
     print(repr(e))
-
-# iterating - not supported
-try:
-    for val in d:
-        print(val)
-except TypeError as e:
-    print(repr(e))
