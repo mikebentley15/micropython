@@ -52,9 +52,10 @@
 
 // path is the path to lookup and *path_out holds the path within the VFS
 // object (starts with / if an absolute path).
-// Returns MP_VFS_ROOT for root dir (and then path_out is undefined) and
+// Returns MP_VFS_ROOT for root dir (and then path_out is set to NULL) and
 // MP_VFS_NONE for path not found.
 mp_vfs_mount_t *mp_vfs_lookup_path(const char *path, const char **path_out) {
+    *path_out = NULL;
     if (*path == '/' || MP_STATE_VM(vfs_cur) == MP_VFS_ROOT) {
         // an absolute path, or the current volume is root, so search root dir
         bool is_abs = 0;
@@ -93,6 +94,7 @@ mp_vfs_mount_t *mp_vfs_lookup_path(const char *path, const char **path_out) {
 }
 
 // Version of mp_vfs_lookup_path that takes and returns uPy string objects.
+// Sets path_out to None if vfs is MP_VFS_NONE or MP_VFS_ROOT
 STATIC mp_vfs_mount_t *lookup_path(mp_obj_t path_in, mp_obj_t *path_out) {
     const char *path = mp_obj_str_get_str(path_in);
     const char *p_out;
@@ -100,6 +102,8 @@ STATIC mp_vfs_mount_t *lookup_path(mp_obj_t path_in, mp_obj_t *path_out) {
     if (vfs != MP_VFS_NONE && vfs != MP_VFS_ROOT) {
         *path_out = mp_obj_new_str_of_type(mp_obj_get_type(path_in),
             (const byte *)p_out, strlen(p_out));
+    } else {
+        *path_out = mp_const_none;
     }
     return vfs;
 }
