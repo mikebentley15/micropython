@@ -193,16 +193,15 @@ const mp_obj_type_t mp_type_deque = {
 typedef struct _mp_obj_deque_it_t {
     mp_obj_base_t base;
     mp_fun_1_t iternext;
-    mp_obj_t deq;
+    mp_obj_deque_t *deq;
     size_t i;
 } mp_obj_deque_it_t;
 
 STATIC mp_obj_t deque_it_iternext(mp_obj_t self_in) {
     mp_obj_deque_it_t *self = MP_OBJ_TO_PTR(self_in);
-    mp_obj_deque_t *deq = MP_OBJ_TO_PTR(self->deq);
-    if (self->i != deq->i_put) {
-        mp_obj_t o_out = deq->items[self->i];
-        self->i = DEQUE_IDX(deq, self->i + 1);
+    if (self->i != self->deq->i_put) {
+        mp_obj_t o_out = self->deq->items[self->i];
+        self->i = DEQUE_IDX(self->deq, self->i + 1);
         return o_out;
     } else {
         return MP_OBJ_STOP_ITERATION;
@@ -215,7 +214,7 @@ mp_obj_t deque_getiter(mp_obj_t self_in, mp_obj_iter_buf_t *iter_buf) {
     mp_obj_deque_it_t *o = (mp_obj_deque_it_t *)iter_buf;
     o->base.type = &mp_type_polymorph_iter;
     o->iternext = deque_it_iternext;
-    o->deq = self_in;
+    o->deq = self;
     o->i = self->i_get;
     return MP_OBJ_FROM_PTR(o);
 }
