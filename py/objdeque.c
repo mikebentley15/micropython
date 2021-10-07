@@ -147,6 +147,21 @@ STATIC mp_obj_t deque_clear(mp_obj_t self_in) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(deque_clear_obj, deque_clear);
 #endif
 
+STATIC mp_obj_t deque_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value) {
+    if (value != MP_OBJ_SENTINEL) {
+        return MP_OBJ_NULL; // unsupported: item deletion & item assignment
+    }
+    #if MICROPY_PY_BUILTINS_SLICE
+    if (mp_obj_is_type(index, &mp_type_slice)) {
+        mp_raise_TypeError(MP_ERROR_TEXT("deque doesn't support slices"));
+    }
+    #endif
+    mp_obj_deque_t *self = MP_OBJ_TO_PTR(self_in);
+    size_t len = deque_len(self);
+    size_t i = mp_get_index(self->base.type, len, index, false);
+    return MP_OBJ_FROM_PTR(self->items[DEQUE_IDX(self, self->i_get + i)]);
+}
+
 STATIC const mp_rom_map_elem_t deque_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_append), MP_ROM_PTR(&deque_append_obj) },
     #if 0
@@ -162,6 +177,7 @@ const mp_obj_type_t mp_type_deque = {
     .name = MP_QSTR_deque,
     .make_new = deque_make_new,
     .unary_op = deque_unary_op,
+    .subscr = deque_subscr,
     .locals_dict = (mp_obj_dict_t *)&deque_locals_dict,
 };
 

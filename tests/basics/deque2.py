@@ -65,53 +65,10 @@ try:
 except IndexError as e:
     print(repr(e))
 
-# indexing on an empty object - indexing is not supported
 d = deque((), 5, True)
-try:
-    print(d[0])
-except TypeError as e:
-    print(repr(e))
-
-# indexing on an object that has elements - indexing is not supported
 d.append(3)
 d.append(5)
 d.append(7)
-try:
-    print(d[0])
-except TypeError as e:
-    print(repr(e))
-try:
-    print(d[1])
-except TypeError as e:
-    print(repr(e))
-try:
-    print(d[2])
-except TypeError as e:
-    print(repr(e))
-
-# indexing with negative numbers - indexing is not supported
-try:
-    print(d[-1])
-except TypeError as e:
-    print(repr(e))
-try:
-    print(d[-2])
-except TypeError as e:
-    print(repr(e))
-try:
-    print(d[-3])
-except TypeError as e:
-    print(repr(e))
-
-# out of bounds indexing - indexing is not supported
-try:
-    print(d[3])
-except TypeError as e:
-    print(repr(e))
-try:
-    print(d[-4])
-except TypeError as e:
-    print(repr(e))
 
 # slice indexing with step=1 - slices not supported
 try:

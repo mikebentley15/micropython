@@ -66,3 +66,35 @@ try:
     ~d
 except TypeError:
     print("TypeError")
+
+d = deque((), 5)
+
+# indexing on an empty object - out of bounds
+try:
+    print(d[0])
+except IndexError:
+    print("IndexError")
+
+d.append(3)
+d.append(5)
+d.append(7)
+
+# indexing on an object that has elements
+print(d[0])
+print(d[1])
+print(d[2])
+
+# indexing with negative numbers - indexing is not supported
+print(d[-1])
+print(d[-2])
+print(d[-3])
+
+# out of bounds indexing - indexing is not supported
+try:
+    print(d[3])
+except IndexError:
+    print("IndexError")
+try:
+    print(d[-4])
+except IndexError:
+    print("IndexError")
