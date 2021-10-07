@@ -47,7 +47,20 @@ typedef struct _mp_obj_deque_t {
     #define FLAG_CHECK_OVERFLOW 1
 } mp_obj_deque_t;
 
-mp_obj_t deque_getiter(mp_obj_t self_in, mp_obj_iter_buf_t *iter_buf);
+STATIC mp_obj_t deque_getiter(mp_obj_t self_in, mp_obj_iter_buf_t *iter_buf);
+
+STATIC void deque_print(const mp_print_t *print, mp_obj_t o_in, mp_print_kind_t kind) {
+    (void)kind;
+    mp_obj_deque_t *o = MP_OBJ_TO_PTR(o_in);
+    mp_print_str(print, "deque([");
+    for (size_t i = o->i_get; i != o->i_put; i = DEQUE_IDX(o, i+1)) {
+        if (i != o->i_get) {
+            mp_print_str(print, ", ");
+        }
+        mp_obj_print_helper(print, o->items[i], PRINT_REPR);
+    }
+    mp_printf(print, "], maxlen=%ld)", o->alloc-1);
+}
 
 STATIC mp_obj_t deque_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *args) {
     mp_arg_check_num(n_args, n_kw, 2, 3, false);
@@ -180,6 +193,7 @@ STATIC MP_DEFINE_CONST_DICT(deque_locals_dict, deque_locals_dict_table);
 const mp_obj_type_t mp_type_deque = {
     { &mp_type_type },
     .name = MP_QSTR_deque,
+    .print = deque_print,
     .make_new = deque_make_new,
     .unary_op = deque_unary_op,
     .subscr = deque_subscr,
