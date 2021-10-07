@@ -32,6 +32,8 @@
 
 #include "py/runtime.h"
 
+#define DEQUE_IDX(deq, i) ((i) % (deq)->alloc)
+
 typedef struct _mp_obj_deque_t {
     mp_obj_base_t base;
     size_t alloc;
@@ -70,17 +72,23 @@ STATIC mp_obj_t deque_make_new(const mp_obj_type_t *type, size_t n_args, size_t 
     return MP_OBJ_FROM_PTR(o);
 }
 
+STATIC inline size_t deque_len(mp_obj_deque_t *self) {
+    if (self->i_get > self->i_put) {
+        // Note: Order matters here since these are unsigned types.
+        //       This is to avoid both overflow and underflow.
+        return (self->alloc - self->i_get) + self->i_put;
+    } else {
+        return self->i_put - self->i_get;
+    }
+}
+
 STATIC mp_obj_t deque_unary_op(mp_unary_op_t op, mp_obj_t self_in) {
     mp_obj_deque_t *self = MP_OBJ_TO_PTR(self_in);
     switch (op) {
         case MP_UNARY_OP_BOOL:
             return mp_obj_new_bool(self->i_get != self->i_put);
         case MP_UNARY_OP_LEN: {
-            ssize_t len = self->i_put - self->i_get;
-            if (len < 0) {
-                len += self->alloc;
-            }
-            return MP_OBJ_NEW_SMALL_INT(len);
+            return MP_OBJ_NEW_SMALL_INT(deque_len(self));
         }
         #if MICROPY_PY_SYS_GETSIZEOF
         case MP_UNARY_OP_SIZEOF: {
@@ -96,10 +104,7 @@ STATIC mp_obj_t deque_unary_op(mp_unary_op_t op, mp_obj_t self_in) {
 STATIC mp_obj_t mp_obj_deque_append(mp_obj_t self_in, mp_obj_t arg) {
     mp_obj_deque_t *self = MP_OBJ_TO_PTR(self_in);
 
-    size_t new_i_put = self->i_put + 1;
-    if (new_i_put == self->alloc) {
-        new_i_put = 0;
-    }
+    size_t new_i_put = DEQUE_IDX(self, self->i_put + 1);
 
     if (self->flags & FLAG_CHECK_OVERFLOW && new_i_put == self->i_get) {
         mp_raise_msg(&mp_type_IndexError, MP_ERROR_TEXT("full"));
@@ -109,9 +114,7 @@ STATIC mp_obj_t mp_obj_deque_append(mp_obj_t self_in, mp_obj_t arg) {
     self->i_put = new_i_put;
 
     if (self->i_get == new_i_put) {
-        if (++self->i_get == self->alloc) {
-            self->i_get = 0;
-        }
+        self->i_get = DEQUE_IDX(self, self->i_get + 1);
     }
 
     return mp_const_none;
@@ -128,9 +131,7 @@ STATIC mp_obj_t deque_popleft(mp_obj_t self_in) {
     mp_obj_t ret = self->items[self->i_get];
     self->items[self->i_get] = MP_OBJ_NULL;
 
-    if (++self->i_get == self->alloc) {
-        self->i_get = 0;
-    }
+    self->i_get = DEQUE_IDX(self, self->i_get + 1);
 
     return ret;
 }
