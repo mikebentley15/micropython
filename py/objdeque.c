@@ -228,16 +228,11 @@ STATIC mp_obj_t deque_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value) {
     return MP_OBJ_FROM_PTR(self->items[(self->i_get + i) % self->alloc]);
 }
 
-STATIC void mp_obj_deque_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest) {
-    if (dest[0] != MP_OBJ_NULL) {
-        // not load attribute
-        return;
-    }
-    if (attr == MP_QSTR_maxlen) {
-        mp_obj_deque_t *self = MP_OBJ_TO_PTR(self_in);
-        dest[0] = MP_OBJ_NEW_SMALL_INT(self->alloc - 1);
-    }
+STATIC mp_obj_t deque_maxlen(mp_obj_t self_in) {
+    mp_obj_deque_t *self = MP_OBJ_TO_PTR(self_in);
+    return MP_OBJ_NEW_SMALL_INT(self->alloc - 1);
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(deque_maxlen_obj, deque_maxlen);
 
 STATIC const mp_rom_map_elem_t deque_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_append), MP_ROM_PTR(&deque_append_obj) },
@@ -246,6 +241,7 @@ STATIC const mp_rom_map_elem_t deque_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_clear), MP_ROM_PTR(&deque_clear_obj) },
     { MP_ROM_QSTR(MP_QSTR_popleft), MP_ROM_PTR(&deque_popleft_obj) },
     { MP_ROM_QSTR(MP_QSTR_pop), MP_ROM_PTR(&deque_pop_obj) },
+    { MP_ROM_QSTR(MP_QSTR_maxlen), MP_ROM_PTR(&deque_maxlen_obj) },
 };
 
 STATIC MP_DEFINE_CONST_DICT(deque_locals_dict, deque_locals_dict_table);
@@ -256,7 +252,6 @@ const mp_obj_type_t mp_type_deque = {
     .print = deque_print,
     .make_new = deque_make_new,
     .unary_op = deque_unary_op,
-    .attr = mp_obj_deque_attr,
     .subscr = deque_subscr,
     .getiter = deque_getiter,
     .locals_dict = (mp_obj_dict_t *)&deque_locals_dict,
