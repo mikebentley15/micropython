@@ -32,7 +32,8 @@
 
 #include "py/runtime.h"
 
-#define DEQUE_IDX(deq, i) ((i) % (deq)->alloc)
+#define DEQUE_NEXT_IDX(deq, i) (((i)+1) % (deq)->alloc)
+#define DEQUE_PREV_IDX(deq, i) ((i) > 0 ? ((i)-1) : ((deq)->alloc - 1))
 
 /******************************************************************************/
 /* deque                                                                      */
@@ -54,7 +55,7 @@ STATIC void deque_print(const mp_print_t *print, mp_obj_t o_in, mp_print_kind_t 
     (void)kind;
     mp_obj_deque_t *o = MP_OBJ_TO_PTR(o_in);
     mp_print_str(print, "deque([");
-    for (size_t i = o->i_get; i != o->i_put; i = DEQUE_IDX(o, i+1)) {
+    for (size_t i = o->i_get; i != o->i_put; i = DEQUE_NEXT_IDX(o, i)) {
         if (i != o->i_get) {
             mp_print_str(print, ", ");
         }
@@ -128,7 +129,7 @@ STATIC mp_obj_t deque_unary_op(mp_unary_op_t op, mp_obj_t self_in) {
 mp_obj_t mp_obj_deque_append(mp_obj_t self_in, mp_obj_t arg) {
     mp_obj_deque_t *self = MP_OBJ_TO_PTR(self_in);
 
-    size_t new_i_put = DEQUE_IDX(self, self->i_put + 1);
+    size_t new_i_put = DEQUE_NEXT_IDX(self, self->i_put);
 
     if (self->flags & FLAG_CHECK_OVERFLOW && new_i_put == self->i_get) {
         mp_raise_msg(&mp_type_IndexError, MP_ERROR_TEXT("full"));
@@ -138,12 +139,32 @@ mp_obj_t mp_obj_deque_append(mp_obj_t self_in, mp_obj_t arg) {
     self->i_put = new_i_put;
 
     if (self->i_get == new_i_put) {
-        self->i_get = DEQUE_IDX(self, self->i_get + 1);
+        self->i_get = DEQUE_NEXT_IDX(self, self->i_get);
     }
 
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(deque_append_obj, mp_obj_deque_append);
+
+mp_obj_t mp_obj_deque_appendleft(mp_obj_t self_in, mp_obj_t arg) {
+    mp_obj_deque_t *self = MP_OBJ_TO_PTR(self_in);
+
+    size_t new_i_get = DEQUE_PREV_IDX(self, self->i_get);
+
+    if (self->flags & FLAG_CHECK_OVERFLOW && new_i_get == self->i_put) {
+        mp_raise_msg(&mp_type_IndexError, MP_ERROR_TEXT("full"));
+    }
+
+    self->i_get = new_i_get;
+    self->items[new_i_get] = arg;
+
+    if (self->i_put == new_i_get) {
+        self->i_put = DEQUE_PREV_IDX(self, self->i_put);
+    }
+
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(deque_appendleft_obj, mp_obj_deque_appendleft);
 
 STATIC mp_obj_t mp_obj_deque_extend(mp_obj_t self_in, mp_obj_t arg) {
     mp_check_self(mp_obj_is_type(self_in, &mp_type_deque));
@@ -151,6 +172,22 @@ STATIC mp_obj_t mp_obj_deque_extend(mp_obj_t self_in, mp_obj_t arg) {
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(deque_extend_obj, mp_obj_deque_extend);
+
+STATIC mp_obj_t deque_pop(mp_obj_t self_in) {
+    mp_obj_deque_t *self = MP_OBJ_TO_PTR(self_in);
+
+    if (self->i_get == self->i_put) {
+        mp_raise_msg(&mp_type_IndexError, MP_ERROR_TEXT("empty"));
+    }
+
+    self->i_put = DEQUE_PREV_IDX(self, self->i_put);
+
+    mp_obj_t ret = self->items[self->i_put];
+    self->items[self->i_put] = MP_OBJ_NULL;
+
+    return ret;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(deque_pop_obj, deque_pop);
 
 STATIC mp_obj_t deque_popleft(mp_obj_t self_in) {
     mp_obj_deque_t *self = MP_OBJ_TO_PTR(self_in);
@@ -162,7 +199,7 @@ STATIC mp_obj_t deque_popleft(mp_obj_t self_in) {
     mp_obj_t ret = self->items[self->i_get];
     self->items[self->i_get] = MP_OBJ_NULL;
 
-    self->i_get = DEQUE_IDX(self, self->i_get + 1);
+    self->i_get = DEQUE_NEXT_IDX(self, self->i_get);
 
     return ret;
 }
@@ -188,7 +225,7 @@ STATIC mp_obj_t deque_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value) {
     mp_obj_deque_t *self = MP_OBJ_TO_PTR(self_in);
     size_t len = deque_len(self);
     size_t i = mp_get_index(self->base.type, len, index, false);
-    return MP_OBJ_FROM_PTR(self->items[DEQUE_IDX(self, self->i_get + i)]);
+    return MP_OBJ_FROM_PTR(self->items[(self->i_get + i) % self->alloc]);
 }
 
 STATIC void mp_obj_deque_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest) {
@@ -204,9 +241,11 @@ STATIC void mp_obj_deque_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest) {
 
 STATIC const mp_rom_map_elem_t deque_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_append), MP_ROM_PTR(&deque_append_obj) },
+    { MP_ROM_QSTR(MP_QSTR_appendleft), MP_ROM_PTR(&deque_appendleft_obj) },
     { MP_ROM_QSTR(MP_QSTR_extend), MP_ROM_PTR(&deque_extend_obj) },
     { MP_ROM_QSTR(MP_QSTR_clear), MP_ROM_PTR(&deque_clear_obj) },
     { MP_ROM_QSTR(MP_QSTR_popleft), MP_ROM_PTR(&deque_popleft_obj) },
+    { MP_ROM_QSTR(MP_QSTR_pop), MP_ROM_PTR(&deque_pop_obj) },
 };
 
 STATIC MP_DEFINE_CONST_DICT(deque_locals_dict, deque_locals_dict_table);
@@ -237,7 +276,7 @@ STATIC mp_obj_t deque_it_iternext(mp_obj_t self_in) {
     mp_obj_deque_it_t *self = MP_OBJ_TO_PTR(self_in);
     if (self->i != self->deq->i_put) {
         mp_obj_t o_out = self->deq->items[self->i];
-        self->i = DEQUE_IDX(self->deq, self->i + 1);
+        self->i = DEQUE_NEXT_IDX(self->deq, self->i);
         return o_out;
     } else {
         return MP_OBJ_STOP_ITERATION;
