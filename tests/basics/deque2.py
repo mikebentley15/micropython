@@ -9,31 +9,27 @@ except ImportError:
     print("SKIP")
     raise SystemExit
 
-
-# Initial sequence is not supported
-try:
-    deque([1, 2, 3], 10)
-except ValueError:
-    print("ValueError")
-
-# Not even empty list, only empty tuple
-try:
-    deque([], 10)
-except ValueError:
-    print("ValueError")
-
 # Only fixed-size deques are supported, so length arg is mandatory
 try:
     deque(())
-except TypeError:
-    print("TypeError")
+except TypeError as e:
+    #print("TypeError")
+    print(repr(e))
 
+# Initialize with more elements than the maximum size with flag on
+try:
+    deque([1,2,3,4,5], 4, True)
+except IndexError as e:
+    print(repr(e))
+deque([1,2,3,4,5], 5, True)  # not an error
+
+# Deque with error flag on
 d = deque((), 2, True)
 
 try:
     d.popleft()
-except IndexError:
-    print("IndexError")
+except IndexError as e:
+    print(repr(e))
 
 print(d.append(1))
 print(d.popleft())

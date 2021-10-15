@@ -1,7 +1,6 @@
-ValueError
-ValueError
-TypeError
-IndexError
+TypeError('function missing 1 required positional arguments',)
+IndexError('full',)
+IndexError('empty',)
 None
 1
 2
