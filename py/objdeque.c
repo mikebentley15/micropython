@@ -65,8 +65,7 @@ STATIC void deque_print(const mp_print_t *print, mp_obj_t o_in, mp_print_kind_t 
     mp_printf(print, "], maxlen=%ld)", o->maxlen);
 }
 
-STATIC void deque_extend_from_iter(mp_obj_t self_in, mp_obj_t iterable) {
-    mp_obj_deque_t *self = MP_OBJ_TO_PTR(self_in);
+STATIC void deque_extend_from_iter(mp_obj_deque_t *self, mp_obj_t iterable) {
     mp_obj_t iter = mp_getiter(iterable, NULL);
     mp_obj_t item;
     while ((item = mp_iternext(iter)) != MP_OBJ_STOP_ITERATION) {
@@ -104,9 +103,9 @@ STATIC mp_obj_t deque_make_new(const mp_obj_type_t *type, size_t n_args, size_t 
     if (n_args > 2) {
         o->flags = mp_obj_get_int(args[2]);
     }
+    deque_extend_from_iter(o, args[0]);
 
     mp_obj_t self = MP_OBJ_FROM_PTR(o);
-    deque_extend_from_iter(self, args[0]);
     return self;
 }
 
@@ -173,8 +172,8 @@ mp_obj_t deque_appendleft(mp_obj_t self_in, mp_obj_t arg) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(deque_appendleft_obj, deque_appendleft);
 
 STATIC mp_obj_t deque_extend(mp_obj_t self_in, mp_obj_t arg) {
-    mp_check_self(mp_obj_is_type(self_in, &mp_type_deque));
-    deque_extend_from_iter(self_in, arg);
+    mp_obj_deque_t *self = MP_OBJ_TO_PTR(self_in);
+    deque_extend_from_iter(self, arg);
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(deque_extend_obj, deque_extend);
